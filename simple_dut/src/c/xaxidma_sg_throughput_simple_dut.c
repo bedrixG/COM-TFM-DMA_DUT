@@ -1,69 +1,3 @@
-/******************************************************************************
-* Copyright (C) 2010 - 2022 Xilinx, Inc.  All rights reserved.
-* Copyright (C) 2022 - 2023 Advanced Micro Devices, Inc.  All rights reserved.
-* SPDX-License-Identifier: MIT
-******************************************************************************/
-
-/*****************************************************************************/
-/**
- *
- * @file xaxidma_example_sg_intr.c
- *
- * This file demonstrates how to use the xaxidma driver on the Xilinx AXI
- * DMA core (AXIDMA) to transfer packets in interrupt mode when the AXIDMA
- * core is configured in Scatter Gather Mode
- *
- * We show how to do multiple packets transfers, as well as how to do multiple
- * BDs per packet transfers.
- *
- * This code assumes a loopback hardware widget is connected to the AXI DMA
- * core for data packet loopback.
- *
- * To see the debug print, you need a Uart16550 or uartlite in your system,
- * and please set "-DDEBUG" in your compiler options. You need to rebuild your
- * software executable.
- *
- *
- * <pre>
- * MODIFICATION HISTORY:
- *
- * Ver   Who  Date     Changes
- * ----- ---- -------- -------------------------------------------------------
- * 1.00a jz   05/18/10 First release
- * 2.00a jz   08/10/10 Second release, added in xaxidma_g.c, xaxidma_sinit.c,
- *		       		   updated tcl file, added xaxidma_porting_guide.h, removed
- *		         	   workaround for endianness
- * 4.00a rkv  02/22/11 Name of the file has been changed for naming consistency
- *		       		   Added interrupt support for Zynq.
- * 5.00a srt  03/05/12 Added Flushing and Invalidation of Caches to fix CRs
- *		       		   648103, 648701.
- *		       		   Added V7 DDR Base Address to fix CR 649405.
- * 6.00a srt  01/24/12 Changed API calls to support MCDMA driver.
- * 7.00a srt  06/18/12 API calls are reverted back for backward compatibility.
- * 7.01a srt  11/02/12 Buffer sizes (Tx and Rx) are modified to meet maximum
- *		       DDR memory limit of the h/w system built with Area mode
- * 7.02a srt  03/01/13 Updated DDR base address for IPI designs (CR 703656).
- * 9.1   adk  01/07/16 Updated DDR base address for Ultrascale (CR 799532) and
- *		       removed the defines for S6/V6.
- * 9.3   ms   01/23/17 Modified xil_printf statement in main function to
- *                     ensure that "Successfully ran" and "Failed" strings are
- *                     available in all examples. This is a fix for CR-965028.
- *       ms   04/05/17 Added tabspace for return statements in functions
- *                     for proper documentation while generating doxygen.
- * 9.6   rsp  02/14/18 Support data buffers above 4GB.Use UINTPTR for storing
- *                     and typecasting buffer address(CR-992638).
- * 9.9   rsp  01/21/19 Fix use of #elif check in deriving DDR_BASE_ADDR.
- * 9.10  rsp  09/17/19 Fix cache maintenance ops for source and dest buffer.
- * 9.14  sk   03/08/22 Delete DDR memory limits comments as they are not
- * 		       relevant to this driver version.
- * 9.15  sa   08/12/22 Updated the example to use latest MIG cannoical define
- * 		       i.e XPAR_MIG_0_C0_DDR4_MEMORY_MAP_BASEADDR.
- * 9.16  sa   09/29/22 Fix infinite loops in the example.
- * </pre>
- *
- * ***************************************************************************
- */
-/***************************** Include Files *********************************/
 #include "xaxidma.h"
 #include "xparameters.h"
 #include "xil_exception.h"
@@ -168,10 +102,7 @@ DEFAULT SET TO 0x01000000
  * from the (unchanged, 64KB each) BD spaces above. Comfortably inside the
  * board's 4GB PS DDR alongside the ELF/heap/stack living below MEM_BASE_ADDR.
  */
-#define TP_BUFFER_BYTES		(32 * 1024 * 1024)   /* 32 MiB per run: the
-						       * main Phase-3.3 sweep
-						       * knob, together with
-						       * MAX_PKT_LEN below */
+#define TP_BUFFER_BYTES		(32 * 1024 * 1024)   // 32 MiB per run
 #define TX_BUFFER_BASE		(MEM_BASE_ADDR + 0x00100000)
 #define TX_BUFFER_HIGH		(TX_BUFFER_BASE + TP_BUFFER_BYTES - 1)
 #define RX_BUFFER_BASE		(TX_BUFFER_BASE + TP_BUFFER_BYTES + 0x00100000)
@@ -194,11 +125,10 @@ DEFAULT SET TO 0x01000000
  */
 #define MARK_UNCACHEABLE        0x701
 
-/* TFM Throughput test: bytes per descriptor - the other main Phase-3.3 sweep knob.
- * BdCountG (computed at runtime from the BD space, see TxSetup) BDs of this
- * size make up ONE single AXI4-Stream frame per run (SOF on BD 0, EOF/TLAST
- * on the last BD) - simpler than the first example's nested multi-packet
- * structure, and enough: framing already proven.
+/* TFM Throughput test: bytes per descriptor - BdCountG (computed at runtime from
+ * the BD space, see TxSetup) BDs of this size make up ONE single AXI4-Stream frame
+ * per run (SOF on BD 0, EOF/TLAST on the last BD) - simpler than the first example's
+ * nested multi-packet structure, and enough: framing already proven.
  * With the 64KB BD spaces above and XAXIDMA_BD_MINIMUM_ALIGNMENT = 64B,
  * BdCountG is 1024, so 1024 * MAX_PKT_LEN must equal TP_BUFFER_BYTES.
  */
@@ -305,7 +235,7 @@ u32 CoalesceCountG;   /* IRQThreshold is 8 bits wide (PG021, bits 23:16 of
                         * MM2S_CR/S2MM_CR) - max 255, set once BdCountG is
                         * known, see TxSetup. */
 u64 TpIterTicks[TP_NUM_ITERATIONS];     /* elapsed ticks, one per run */
-u32   TpIterOk[TP_NUM_ITERATIONS];      /* 1 = CheckData + framing both passed */
+u32 TpIterOk[TP_NUM_ITERATIONS];      /* 1 = CheckData + framing both passed */
 
 /*
  * Buffer for transmit packet. Must be 32-bit aligned to be used by DMA.
@@ -437,8 +367,7 @@ int main(void)
 		Xil_DCacheFlushRange((UINTPTR)Packet, TP_BUFFER_BYTES);
 	}
 
-	xil_printf("--- Throughput test: %u iterations of %u bytes (%u BDs x %u "
-		   "bytes) ---\r\n",
+	xil_printf("--- Throughput test: %u iterations of %u bytes (%u BDs x %u bytes) ---\r\n",
 		   (unsigned)TP_NUM_ITERATIONS, (unsigned)TP_BUFFER_BYTES,
 		   (unsigned)BdCountG, (unsigned)MAX_PKT_LEN);
 
@@ -513,8 +442,7 @@ int main(void)
 			TEnd = TfmReadCntpct();
 			TpIterTicks[Iter] = TEnd - TStart;
 
-			/* Correctness check happens AFTER the timer stops, so
-			 * it never inflates the measured transfer time. */
+			// Check data after the timer stops
 			Status = CheckData(TP_BUFFER_BYTES, 0);
 			if (Status != XST_SUCCESS) {
 				xil_printf("Iter %u: data check failed\r\n",
@@ -523,8 +451,7 @@ int main(void)
 				continue;
 			}
 
-			if (RxEofCount != 1 || RxFrameErrors != 0 ||
-			    RxLenErrors != 0) {
+			if (RxEofCount != 1 || RxFrameErrors != 0 || RxLenErrors != 0) {
 				xil_printf("Iter %u: framing check failed "
 					   "(eof=%u frame_err=%u len_err=%u)"
 					   "\r\n", (unsigned)Iter,
@@ -910,11 +837,11 @@ static void RxCallBack(XAxiDma_BdRing *RxRingPtr)
 		RxDone += 1;
 	}
 
-	/* TFM Throughput test fix: return the processed BDs to the free pool.
+	/* TFM Throughput test: return the processed BDs to the free pool.
 	 * first baseline never did this because it only ran once and never
 	 * needed the BDs again; this repeat-loop version does, every
 	 * iteration - without it, RxArm() finds FreeBdCount = 0 on every
-	 * iteration after the first, which is exactly the failure you saw.
+	 * iteration after the first.
 	 */
 	Status = XAxiDma_BdRingFree(RxRingPtr, BdCount, BdPtr);
 	if (Status != XST_SUCCESS) {
@@ -1324,9 +1251,7 @@ static int TxSetup(XAxiDma *AxiDmaInstPtr)
 	 * it instead of recomputing. */
 	BdCountG = BdCount;
 	CoalesceCountG = (BdCountG > 128) ? 128 : BdCountG;
-	if (CoalesceCountG == 0) {
-		CoalesceCountG = 1;
-	}
+	if (CoalesceCountG == 0) CoalesceCountG = 1;
 	if ((u64)BdCountG * (u64)MAX_PKT_LEN != (u64)TP_BUFFER_BYTES) {
 		xil_printf("BdCountG (%u) * MAX_PKT_LEN (%u) != TP_BUFFER_BYTES "
 			   "(%u) - adjust TP_BUFFER_BYTES so it divides evenly "

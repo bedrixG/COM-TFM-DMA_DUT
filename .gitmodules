@@ -1,0 +1,3 @@
+[submodule "simple_dut/src/vhdl/COM-FPGA-vhdl-basic-components"]
+	path = simple_dut/src/vhdl/COM-FPGA-vhdl-basic-components
+	url = git@github.com:Gradiant/COM-FPGA-vhdl-basic-components.git
