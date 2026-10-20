@@ -30,8 +30,14 @@ PROJECTS/**/db/*
 
 # Ignore all subdirectories under PROJECTS/Vivado
 /PROJECTS/Vivado/*/
-/simple_dut/hw/*/
-/simple_dut/sw/*/
+/hw/*/
+
+# Ignore the Vitis workspace
+/sw/workspace
+# Ignore the Petalinux build directory
+/sw/compiled-files
+*.ub
+*.tar.gz
 
 # But do not ignore files directly in PROJECTS/Vivado
 !/PROJECTS/Vivado/*
